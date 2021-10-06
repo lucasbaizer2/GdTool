@@ -64,7 +64,8 @@ namespace GdTool {
                     TokenType previous = TokenType.Newline;
                     for (int i = 0; i < tokenCount; i++) {
                         tokens[i] = new Token {
-                            Definition = tokenTypes[i]
+                            Type = provider.OpcodeProvider.GetTokenType(tokenTypes[i]),
+                            Data = tokenTypes[i] >> 8
                         };
                         ReadToken(tokens[i], identifiers, constants);
 
