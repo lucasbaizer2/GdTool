@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
 using System.IO;
+using System.Text;
 
 namespace GdTool {
     public class GdcFile {
@@ -33,9 +33,9 @@ namespace GdTool {
                         identifiers[i] = ident;
                     }
 
-                    object[] constants = new object[constantCount];
+                    IGdStructure[] constants = new IGdStructure[constantCount];
                     for (int i = 0; i < constantCount; i++) {
-                        constants[i] = DecodeConstant(buf);
+                        constants[i] = DecodeConstant(buf, provider);
                     }
 
                     Dictionary<uint, uint> tokenLineMap = new Dictionary<uint, uint>((int)lineCount);
@@ -43,7 +43,8 @@ namespace GdTool {
                         tokenLineMap.Add(buf.ReadUInt32(), buf.ReadUInt32());
                     }
 
-                    uint[] tokenTypes = new uint[tokenCount];
+                    DecompileBuffer decompile = new DecompileBuffer();
+                    GdcTokenType previous = GdcTokenType.Newline;
                     for (int i = 0; i < tokenCount; i++) {
                         byte cur = arr[buf.BaseStream.Position];
 
@@ -55,22 +56,14 @@ namespace GdTool {
                             buf.BaseStream.Position += 1;
                         }
 
-                        tokenTypes[i] = tokenType;
-                    }
-
-                    DecompileBuffer decompile = new DecompileBuffer();
-
-                    Token[] tokens = new Token[tokenCount];
-                    TokenType previous = TokenType.Newline;
-                    for (int i = 0; i < tokenCount; i++) {
-                        tokens[i] = new Token {
-                            Type = provider.OpcodeProvider.GetTokenType(tokenTypes[i]),
-                            Data = tokenTypes[i] >> 8
+                        GdcToken token = new GdcToken {
+                            Type = provider.TokenTypeProvider.GetTokenType(tokenType & 0xFF),
+                            Data = tokenType >> 8
                         };
-                        ReadToken(tokens[i], identifiers, constants);
+                        ReadToken(token, identifiers, constants);
 
-                        tokens[i].Decompile(decompile, previous, provider);
-                        previous = tokens[i].Type;
+                        token.Decompile(decompile, previous, provider);
+                        previous = token.Type;
                     }
 
                     Decompiled = decompile.Content;
@@ -78,12 +71,12 @@ namespace GdTool {
             }
         }
 
-        private void ReadToken(Token token, string[] identifiers, object[] constants) {
+        private void ReadToken(GdcToken token, string[] identifiers, IGdStructure[] constants) {
             switch (token.Type) {
-                case TokenType.Identifier:
-                    token.Operand = identifiers[token.Data];
+                case GdcTokenType.Identifier:
+                    token.Operand = new GdcIdentifier(identifiers[token.Data]);
                     return;
-                case TokenType.Constant:
+                case GdcTokenType.Constant:
                     token.Operand = constants[token.Data];
                     return;
                 default:
@@ -91,191 +84,53 @@ namespace GdTool {
             }
         }
 
-        private string DecodeString(BinaryReader buf) {
-            uint len = buf.ReadUInt32();
-            uint padding = 0;
-            if (len % 4 != 0) {
-                padding = 4 - len % 4;
-            }
-
-            byte[] strBytes = buf.ReadBytes((int)len);
-            string str = Encoding.UTF8.GetString(strBytes);
-
-            buf.ReadBytes((int)padding);
-
-            return str;
-        }
-
-        private object DecodeConstant(BinaryReader buf) {
+        private IGdStructure DecodeConstant(BinaryReader buf, BytecodeProvider provider) {
             uint type = buf.ReadUInt32();
             uint typeWithoutFlags = type & 0xFF;
+            string typeName = provider.TypeNameProvider.GetTypeName(typeWithoutFlags);
 
-            switch (typeWithoutFlags) {
-                case 0: // NIL
-                    return new Nil();
-                case 1: // BOOL
-                    return buf.ReadUInt32() != 0;
-                case 2: // INT
+            switch (typeName) {
+                case "Nil":
+                    return new Nil().Deserialize(buf);
+                case "bool":
+                    return new GdcBool().Deserialize(buf);
+                case "int":
                     if ((type & (1 << 16)) != 0) {
-                        return buf.ReadUInt64();
+                        return new GdcUInt64().Deserialize(buf);
                     } else {
-                        return buf.ReadUInt32();
+                        return new GdcUInt32().Deserialize(buf);
                     }
-                case 3: // REAL
+                case "float":
                     if ((type & (1 << 16)) != 0) {
-                        return buf.ReadDouble();
+                        return new GdcDouble().Deserialize(buf);
                     } else {
-                        return buf.ReadSingle();
+                        return new GdcSingle().Deserialize(buf);
                     }
-                case 4: // STRING
-                    return new GdcString(DecodeString(buf));
-                case 5: // VECTOR2
-                    return new Vector2 {
-                        X = buf.ReadSingle(),
-                        Y = buf.ReadSingle()
-                    };
-                case 6: // RECT2
-                    return new Rect2 {
-                        Position = new Vector2 {
-                            X = buf.ReadSingle(),
-                            Y = buf.ReadSingle()
-                        },
-                        Size = new Vector2 {
-                            X = buf.ReadSingle(),
-                            Y = buf.ReadSingle()
-                        },
-                    };
-                case 7: // VECTOR3
-                    return new Vector3 {
-                        X = buf.ReadSingle(),
-                        Y = buf.ReadSingle(),
-                        Z = buf.ReadSingle()
-                    };
-                case 8: // TRANSFORM2D
-                    return new Transform2d {
-                        Origin = new Vector2 {
-                            X = buf.ReadSingle(),
-                            Y = buf.ReadSingle()
-                        },
-                        X = new Vector2 {
-                            X = buf.ReadSingle(),
-                            Y = buf.ReadSingle()
-                        },
-                        Y = new Vector2 {
-                            X = buf.ReadSingle(),
-                            Y = buf.ReadSingle()
-                        },
-                    };
-                case 9: // PLANE
-                    return new Plane {
-                        Normal = new Vector3 {
-                            X = buf.ReadSingle(),
-                            Y = buf.ReadSingle(),
-                            Z = buf.ReadSingle()
-                        },
-                        D = buf.ReadSingle()
-                    };
-                case 10: // QUAT
-                    return new Quat {
-                        X = buf.ReadSingle(),
-                        Y = buf.ReadSingle(),
-                        Z = buf.ReadSingle(),
-                        W = buf.ReadSingle()
-                    };
-                case 11: // AABB
-                    return new Aabb {
-                        Position = new Vector3 {
-                            X = buf.ReadSingle(),
-                            Y = buf.ReadSingle(),
-                            Z = buf.ReadSingle()
-                        },
-                        Size = new Vector3 {
-                            X = buf.ReadSingle(),
-                            Y = buf.ReadSingle(),
-                            Z = buf.ReadSingle()
-                        }
-                    };
-                case 12: // BASIS
-                    return new Basis {
-                        X = new Vector3 {
-                            X = buf.ReadSingle(),
-                            Y = buf.ReadSingle(),
-                            Z = buf.ReadSingle()
-                        },
-                        Y = new Vector3 {
-                            X = buf.ReadSingle(),
-                            Y = buf.ReadSingle(),
-                            Z = buf.ReadSingle()
-                        },
-                        Z = new Vector3 {
-                            X = buf.ReadSingle(),
-                            Y = buf.ReadSingle(),
-                            Z = buf.ReadSingle()
-                        }
-                    };
-                case 13: // TRANSFORM
-                    return new Transform {
-                        Basis = new Basis {
-                            X = new Vector3 {
-                                X = buf.ReadSingle(),
-                                Y = buf.ReadSingle(),
-                                Z = buf.ReadSingle()
-                            },
-                            Y = new Vector3 {
-                                X = buf.ReadSingle(),
-                                Y = buf.ReadSingle(),
-                                Z = buf.ReadSingle()
-                            },
-                            Z = new Vector3 {
-                                X = buf.ReadSingle(),
-                                Y = buf.ReadSingle(),
-                                Z = buf.ReadSingle()
-                            }
-                        },
-                        Origin = new Vector3 {
-                            X = buf.ReadSingle(),
-                            Y = buf.ReadSingle(),
-                            Z = buf.ReadSingle()
-                        }
-                    };
-                case 14: // COLOR
-                    return new Color {
-                        R = buf.ReadSingle(),
-                        G = buf.ReadSingle(),
-                        B = buf.ReadSingle(),
-                        A = buf.ReadSingle()
-                    };
-                case 15: // NODE_PATH
-                    uint strlen = buf.ReadUInt32();
-                    if ((strlen & (strlen << 31)) != 0) {
-                        uint nameCount = strlen &= 0x7FFFFFFF;
-                        uint subnameCount = buf.ReadUInt32();
-                        uint flags = buf.ReadUInt32();
-
-                        if ((flags & 2) != 0) {
-                            subnameCount++;
-                        }
-
-                        string[] names = new string[nameCount];
-                        string[] subnames = new string[subnameCount];
-                        for (int i = 0; i < nameCount; i++) {
-                            names[i] = DecodeString(buf);
-                        }
-                        for (int i = 0; i < subnameCount; i++) {
-                            subnames[i] = DecodeString(buf);
-                        }
-
-                        return new NodePath {
-                            Names = names,
-                            Subnames = subnames,
-                            Flags = flags & 1
-                        };
-                    } else {
-                        throw new InvalidOperationException("invalid data");
-                        // buf.Skip(-4);
-                        // return DecodeString(buf);
-                    }
-                case 16: // RID
+                case "String":
+                    return new GdcString().Deserialize(buf);
+                case "Vector2":
+                    return new Vector2().Deserialize(buf);
+                case "Rect2":
+                    return new Rect2().Deserialize(buf);
+                case "Vector3":
+                    return new Vector3().Deserialize(buf);
+                case "Transform2D":
+                    return new Transform2d().Deserialize(buf);
+                case "Plane":
+                    return new Plane().Deserialize(buf);
+                case "Quat":
+                    return new Quat().Deserialize(buf);
+                case "AABB":
+                    return new Aabb().Deserialize(buf);
+                case "Basis":
+                    return new Basis().Deserialize(buf);
+                case "Transform":
+                    return new Transform().Deserialize(buf);
+                case "Color":
+                    return new Color().Deserialize(buf);
+                case "NodePath":
+                    throw new NotImplementedException("NodePath");
+                case "RID":
                     throw new NotImplementedException("RID");
                 default:
                     throw new NotImplementedException(type.ToString());

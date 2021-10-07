@@ -1,10 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using CommandLine;
+using System;
 using System.IO;
-using CommandLine;
 
 namespace GdTool {
     public class Program {
@@ -30,12 +26,12 @@ namespace GdTool {
         }
 
         static void Main(string[] args) {
-            args = new string[] { "decode", "-i", @"C:\Users\Lucas\Downloads\tasteless-shores.pck", "-d" };
+            byte[] compiled = GdScriptCompiler.Compile(File.ReadAllText(@"C:\Users\Lucas\Downloads\Godot RE Tools\tasteless-shores\game\player\player_controller.gd"), new BytecodeProvider(0x5565f55));
+            GdcFile file = new GdcFile(compiled, new BytecodeProvider(0x5565f55));
+            string decompiled = file.Decompiled;
+            Console.WriteLine(decompiled);
 
             Parser.Default.ParseArguments<DecodeOptions, BuildOptions>(args).WithParsed<DecodeOptions>(Decode).WithParsed<BuildOptions>(Build);
-
-            Console.WriteLine("Press any key to exit.");
-            Console.ReadKey();
         }
 
         private static void Decode(DecodeOptions options) {
@@ -78,10 +74,7 @@ namespace GdTool {
 
             Console.WriteLine("success.");
 
-            BytecodeProvider provider = new BytecodeProvider {
-                TypeNameProvider = TypeNameProviders.ProviderV3,
-                OpcodeProvider = OpcodeProviders.ProviderV13
-            };
+            BytecodeProvider provider = new BytecodeProvider(0x5565f55);
             for (int i = 0; i < pck.Entries.Count; i++) {
                 PckFileEntry entry = pck.Entries[i];
                 string path = entry.Path.Substring(6); // remove res://
@@ -99,9 +92,10 @@ namespace GdTool {
                 } else {
                     File.WriteAllBytes(full, entry.Data);
                 }
+                File.WriteAllBytes(full, entry.Data);
 
-                int percentage = (int)Math.Ceiling(i / (double)pck.Entries.Count * 100.0);
-                Console.Write("\rUnpacking: " + i + "/" + pck.Entries.Count + " (" + percentage + "%)");
+                int percentage = (int)Math.Floor((i + 1) / (double)pck.Entries.Count * 100.0);
+                Console.Write("\rUnpacking: " + (i + 1) + "/" + pck.Entries.Count + " (" + percentage + "%)");
             }
             Console.WriteLine();
         }

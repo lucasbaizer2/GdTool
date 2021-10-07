@@ -22,17 +22,17 @@ namespace GdTool {
 
         public DecompileBuffer AppendOp(string val) {
             if (Text.Length > 0 && Text[Text.Length - 1] != ' ') {
-                Text.Append(" ");
+                Text.Append(' ');
             }
             Text.Append(val);
-            Text.Append(" ");
+            Text.Append(' ');
             return this;
         }
 
         public void AppendNewLine() {
             Text.Append(Environment.NewLine);
             for (int i = 0; i < Indentation; i++) {
-                Text.Append("    ");
+                Text.Append('\t');
             }
         }
     }

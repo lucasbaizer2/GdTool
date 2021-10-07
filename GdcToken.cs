@@ -1,7 +1,8 @@
 ﻿using System;
+using System.IO;
 
 namespace GdTool {
-    public enum TokenType {
+    public enum GdcTokenType {
         Empty,
         Identifier,
         Constant,
@@ -75,9 +76,9 @@ namespace GdTool {
         PrMaster,
         PrSlave,
         PrPuppet,
-        PrRemoteSync,
-        PrMasterSync,
-        PrPuppetSync,
+        PrRemotesync,
+        PrMastersync,
+        PrPuppetsync,
         BracketOpen,
         BracketClose,
         CurlyBracketOpen,
@@ -103,315 +104,229 @@ namespace GdTool {
         Max
     }
 
-    public class Token {
-        private static readonly string[] FunctionNames = new string[] {
-            "sin",
-            "cos",
-            "tan",
-            "sinh",
-            "cosh",
-            "tanh",
-            "asin",
-            "acos",
-            "atan",
-            "atan2",
-            "sqrt",
-            "fmod",
-            "fposmod",
-            "posmod",
-            "floor",
-            "ceil",
-            "round",
-            "abs",
-            "sign",
-            "pow",
-            "log",
-            "exp",
-            "is_nan",
-            "is_inf",
-            "is_equal_approx",
-            "is_zero_approx",
-            "ease",
-            "decimals",
-            "step_decimals",
-            "stepify",
-            "lerp",
-            "lerp_angle",
-            "inverse_lerp",
-            "range_lerp",
-            "smoothstep",
-            "move_toward",
-            "dectime",
-            "randomize",
-            "randi",
-            "randf",
-            "rand_range",
-            "seed",
-            "rand_seed",
-            "deg2rad",
-            "rad2deg",
-            "linear2db",
-            "db2linear",
-            "polar2cartesian",
-            "cartesian2polar",
-            "wrapi",
-            "wrapf",
-            "max",
-            "min",
-            "clamp",
-            "nearest_po2",
-            "weakref",
-            "funcref",
-            "convert",
-            "typeof",
-            "type_exists",
-            "char",
-            "ord",
-            "str",
-            "print",
-            "printt",
-            "prints",
-            "printerr",
-            "printraw",
-            "print_debug",
-            "push_error",
-            "push_warning",
-            "var2str",
-            "str2var",
-            "var2bytes",
-            "bytes2var",
-            "range",
-            "load",
-            "inst2dict",
-            "dict2inst",
-            "validate_json",
-            "parse_json",
-            "to_json",
-            "hash",
-            "Color8",
-            "ColorN",
-            "print_stack",
-            "get_stack",
-            "instance_from_id",
-            "len",
-            "is_instance_valid",
-        };
-
+    public class GdcToken {
         public uint LineCol;
-        public object Operand;
-        public TokenType Type;
+        public IGdStructure Operand;
+        public GdcTokenType Type;
         public uint Data;
 
-        public DecompileBuffer Decompile(DecompileBuffer buf, TokenType previous, BytecodeProvider provider) {
+        public void Compile(BinaryWriter writer, BytecodeProvider provider) {
+            writer.Write(provider.TokenTypeProvider.GetTokenId(Type) & (Data << 8));
+            if (Operand != null) {
+                Operand.Serialize(writer, provider);
+            }
+        }
+
+        public DecompileBuffer Decompile(DecompileBuffer buf, GdcTokenType previous, BytecodeProvider provider) {
             switch (Type) {
-                case TokenType.Empty:
+                case GdcTokenType.Empty:
                     return buf;
-                case TokenType.Identifier:
+                case GdcTokenType.Identifier:
                     return buf.Append(Operand.ToString());
-                case TokenType.Constant:
+                case GdcTokenType.Constant:
                     return buf.Append(Operand.ToString());
-                case TokenType.Self:
+                case GdcTokenType.Self:
                     return buf.Append("self");
-                case TokenType.BuiltInType:
+                case GdcTokenType.BuiltInType:
                     return buf.Append(provider.TypeNameProvider.GetTypeName(Data));
-                case TokenType.BuiltInFunc:
-                    return buf.Append(FunctionNames[Data]);
-                case TokenType.OpIn:
+                case GdcTokenType.BuiltInFunc:
+                    return buf.Append(provider.BuiltInFunctions[Data]);
+                case GdcTokenType.OpIn:
                     return buf.AppendOp("in");
-                case TokenType.OpEqual:
+                case GdcTokenType.OpEqual:
                     return buf.AppendOp("==");
-                case TokenType.OpNotEqual:
+                case GdcTokenType.OpNotEqual:
                     return buf.AppendOp("!=");
-                case TokenType.OpLess:
+                case GdcTokenType.OpLess:
                     return buf.AppendOp("<");
-                case TokenType.OpLessEqual:
+                case GdcTokenType.OpLessEqual:
                     return buf.AppendOp("<=");
-                case TokenType.OpGreater:
+                case GdcTokenType.OpGreater:
                     return buf.AppendOp(">");
-                case TokenType.OpGreaterEqual:
+                case GdcTokenType.OpGreaterEqual:
                     return buf.AppendOp(">=");
-                case TokenType.OpAnd:
+                case GdcTokenType.OpAnd:
                     return buf.AppendOp("and");
-                case TokenType.OpOr:
+                case GdcTokenType.OpOr:
                     return buf.AppendOp("or");
-                case TokenType.OpNot:
+                case GdcTokenType.OpNot:
                     return buf.AppendOp("not");
-                case TokenType.OpAdd:
+                case GdcTokenType.OpAdd:
                     return buf.AppendOp("+");
-                case TokenType.OpSub:
+                case GdcTokenType.OpSub:
                     return buf.AppendOp("-");
-                case TokenType.OpMul:
+                case GdcTokenType.OpMul:
                     return buf.AppendOp("*");
-                case TokenType.OpDiv:
+                case GdcTokenType.OpDiv:
                     return buf.AppendOp("/");
-                case TokenType.OpMod:
+                case GdcTokenType.OpMod:
                     return buf.AppendOp("%");
-                case TokenType.OpShiftLeft:
+                case GdcTokenType.OpShiftLeft:
                     return buf.AppendOp("<<");
-                case TokenType.OpShiftRight:
+                case GdcTokenType.OpShiftRight:
                     return buf.AppendOp(">>");
-                case TokenType.OpAssign:
+                case GdcTokenType.OpAssign:
                     return buf.AppendOp("=");
-                case TokenType.OpAssignAdd:
+                case GdcTokenType.OpAssignAdd:
                     return buf.AppendOp("+=");
-                case TokenType.OpAssignSub:
+                case GdcTokenType.OpAssignSub:
                     return buf.AppendOp("-=");
-                case TokenType.OpAssignMul:
+                case GdcTokenType.OpAssignMul:
                     return buf.AppendOp("*=");
-                case TokenType.OpAssignDiv:
+                case GdcTokenType.OpAssignDiv:
                     return buf.AppendOp("/=");
-                case TokenType.OpAssignMod:
+                case GdcTokenType.OpAssignMod:
                     return buf.AppendOp("%=");
-                case TokenType.OpAssignShiftLeft:
+                case GdcTokenType.OpAssignShiftLeft:
                     return buf.AppendOp("<<=");
-                case TokenType.OpAssignShiftRight:
+                case GdcTokenType.OpAssignShiftRight:
                     return buf.AppendOp(">>=");
-                case TokenType.OpAssignBitAnd:
+                case GdcTokenType.OpAssignBitAnd:
                     return buf.AppendOp("&=");
-                case TokenType.OpAssignBitOr:
+                case GdcTokenType.OpAssignBitOr:
                     return buf.AppendOp("|=");
-                case TokenType.OpAssignBitXor:
+                case GdcTokenType.OpAssignBitXor:
                     return buf.AppendOp("^=");
-                case TokenType.OpBitAnd:
+                case GdcTokenType.OpBitAnd:
                     return buf.AppendOp("&");
-                case TokenType.OpBitOr:
+                case GdcTokenType.OpBitOr:
                     return buf.AppendOp("|");
-                case TokenType.OpBitXor:
+                case GdcTokenType.OpBitXor:
                     return buf.AppendOp("^");
-                case TokenType.OpBitInvert:
+                case GdcTokenType.OpBitInvert:
                     return buf.AppendOp("!");
-                case TokenType.CfIf:
-                    if (previous != TokenType.Newline) {
+                case GdcTokenType.CfIf:
+                    if (previous != GdcTokenType.Newline) {
                         return buf.AppendOp("if");
                     } else {
                         return buf.Append("if ");
                     }
-                case TokenType.CfElif:
-                    if (previous != TokenType.Newline) {
+                case GdcTokenType.CfElif:
+                    if (previous != GdcTokenType.Newline) {
                         return buf.AppendOp("elif");
                     } else {
                         return buf.Append("elif ");
                     }
-                case TokenType.CfElse:
-                    if (previous != TokenType.Newline) {
+                case GdcTokenType.CfElse:
+                    if (previous != GdcTokenType.Newline) {
                         return buf.Append(" else");
                     } else {
                         return buf.Append("else");
                     }
-                case TokenType.CfFor:
+                case GdcTokenType.CfFor:
                     return buf.Append("for ");
-                case TokenType.CfWhile:
+                case GdcTokenType.CfWhile:
                     return buf.Append("while ");
-                case TokenType.CfBreak:
+                case GdcTokenType.CfBreak:
                     return buf.Append("break");
-                case TokenType.CfContinue:
+                case GdcTokenType.CfContinue:
                     return buf.Append("continue");
-                case TokenType.CfPass:
+                case GdcTokenType.CfPass:
                     return buf.Append("pass");
-                case TokenType.CfReturn:
+                case GdcTokenType.CfReturn:
                     return buf.Append("return ");
-                case TokenType.CfMatch:
+                case GdcTokenType.CfMatch:
                     return buf.Append("match ");
-                case TokenType.PrFunction:
+                case GdcTokenType.PrFunction:
                     return buf.Append("func ");
-                case TokenType.PrClass:
+                case GdcTokenType.PrClass:
                     return buf.Append("class ");
-                case TokenType.PrClassName:
+                case GdcTokenType.PrClassName:
                     return buf.Append("class_name ");
-                case TokenType.PrExtends:
+                case GdcTokenType.PrExtends:
                     return buf.Append("extends ");
-                case TokenType.PrIs:
+                case GdcTokenType.PrIs:
                     return buf.AppendOp("is");
-                case TokenType.PrOnready:
+                case GdcTokenType.PrOnready:
                     return buf.Append("onready ");
-                case TokenType.PrTool:
+                case GdcTokenType.PrTool:
                     return buf.Append("tool ");
-                case TokenType.PrStatic:
+                case GdcTokenType.PrStatic:
                     return buf.Append("static ");
-                case TokenType.PrExport:
+                case GdcTokenType.PrExport:
                     return buf.Append("export ");
-                case TokenType.PrSetget:
+                case GdcTokenType.PrSetget:
                     return buf.AppendOp("setget");
-                case TokenType.PrConst:
+                case GdcTokenType.PrConst:
                     return buf.Append("const ");
-                case TokenType.PrVar:
+                case GdcTokenType.PrVar:
                     return buf.Append("var ");
-                case TokenType.PrAs:
+                case GdcTokenType.PrAs:
                     return buf.AppendOp("as");
-                case TokenType.PrVoid:
+                case GdcTokenType.PrVoid:
                     return buf.Append("void ");
-                case TokenType.PrEnum:
+                case GdcTokenType.PrEnum:
                     return buf.Append("enum ");
-                case TokenType.PrPreload:
+                case GdcTokenType.PrPreload:
                     return buf.Append("preload");
-                case TokenType.PrAssert:
+                case GdcTokenType.PrAssert:
                     return buf.Append("assert ");
-                case TokenType.PrYield:
+                case GdcTokenType.PrYield:
                     return buf.Append("yield ");
-                case TokenType.PrSignal:
+                case GdcTokenType.PrSignal:
                     return buf.Append("signal ");
-                case TokenType.PrBreakpoint:
+                case GdcTokenType.PrBreakpoint:
                     return buf.Append("breakpoint ");
-                case TokenType.PrRemote:
+                case GdcTokenType.PrRemote:
                     return buf.Append("remote ");
-                case TokenType.PrSync:
+                case GdcTokenType.PrSync:
                     return buf.Append("sync ");
-                case TokenType.PrMaster:
+                case GdcTokenType.PrMaster:
                     return buf.Append("master ");
-                case TokenType.PrSlave:
+                case GdcTokenType.PrSlave:
                     return buf.Append("slave ");
-                case TokenType.PrPuppet:
+                case GdcTokenType.PrPuppet:
                     return buf.Append("puppet ");
-                case TokenType.PrRemoteSync:
+                case GdcTokenType.PrRemotesync:
                     return buf.Append("remotesync ");
-                case TokenType.PrMasterSync:
+                case GdcTokenType.PrMastersync:
                     return buf.Append("mastersync ");
-                case TokenType.PrPuppetSync:
+                case GdcTokenType.PrPuppetsync:
                     return buf.Append("puppetsync ");
-                case TokenType.BracketOpen:
+                case GdcTokenType.BracketOpen:
                     return buf.Append("[");
-                case TokenType.BracketClose:
+                case GdcTokenType.BracketClose:
                     return buf.Append("]");
-                case TokenType.CurlyBracketOpen:
+                case GdcTokenType.CurlyBracketOpen:
                     return buf.AppendOp("{");
-                case TokenType.CurlyBracketClose:
+                case GdcTokenType.CurlyBracketClose:
                     return buf.Append("}");
-                case TokenType.ParenthesisOpen:
+                case GdcTokenType.ParenthesisOpen:
                     return buf.Append("(");
-                case TokenType.ParenthesisClose:
+                case GdcTokenType.ParenthesisClose:
                     return buf.Append(")");
-                case TokenType.Comma:
+                case GdcTokenType.Comma:
                     return buf.Append(", ");
-                case TokenType.Semicolon:
+                case GdcTokenType.Semicolon:
                     return buf.Append(";");
-                case TokenType.Period:
+                case GdcTokenType.Period:
                     return buf.Append(".");
-                case TokenType.QuestionMark:
+                case GdcTokenType.QuestionMark:
                     return buf.Append("?");
-                case TokenType.Colon:
+                case GdcTokenType.Colon:
                     return buf.Append(":");
-                case TokenType.Dollar:
+                case GdcTokenType.Dollar:
                     return buf.Append("$");
-                case TokenType.ForwardArrow:
+                case GdcTokenType.ForwardArrow:
                     return buf.Append("->");
-                case TokenType.Newline:
+                case GdcTokenType.Newline:
                     buf.Indentation = (int)Data;
                     buf.AppendNewLine();
                     return buf;
-                case TokenType.ConstPi:
+                case GdcTokenType.ConstPi:
                     return buf.Append("PI");
-                case TokenType.ConstTau:
+                case GdcTokenType.ConstTau:
                     return buf.Append("TAU");
-                case TokenType.Wildcard:
+                case GdcTokenType.Wildcard:
                     return buf.Append("*");
-                case TokenType.ConstInf:
+                case GdcTokenType.ConstInf:
                     return buf.Append("INF");
-                case TokenType.ConstNan:
+                case GdcTokenType.ConstNan:
                     return buf.Append("NAN");
-                case TokenType.Error:
-                case TokenType.Eof:
-                case TokenType.Cursor:
-                case TokenType.Max:
+                case GdcTokenType.Error:
+                case GdcTokenType.Eof:
+                case GdcTokenType.Cursor:
+                case GdcTokenType.Max:
                     return buf;
                 default:
                     throw new NotImplementedException(Type.ToString());
