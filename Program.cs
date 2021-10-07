@@ -27,8 +27,7 @@ namespace GdTool {
 
         static void Main(string[] args) {
             byte[] compiled = GdScriptCompiler.Compile(File.ReadAllText(@"C:\Users\Lucas\Downloads\Godot RE Tools\tasteless-shores\game\player\player_controller.gd"), new BytecodeProvider(0x5565f55));
-            GdcFile file = new GdcFile(compiled, new BytecodeProvider(0x5565f55));
-            string decompiled = file.Decompiled;
+            string decompiled = GcScriptDecompiler.Decompile(compiled, new BytecodeProvider(0x5565f55));
             Console.WriteLine(decompiled);
 
             Parser.Default.ParseArguments<DecodeOptions, BuildOptions>(args).WithParsed<DecodeOptions>(Decode).WithParsed<BuildOptions>(Build);
@@ -85,8 +84,7 @@ namespace GdTool {
                 }
 
                 if (options.Decompile && path.EndsWith(".gdc")) {
-                    GdcFile file = new GdcFile(entry.Data, provider);
-                    string decompiled = file.Decompiled;
+                    string decompiled = GcScriptDecompiler.Decompile(entry.Data, provider);
                     full = full.Substring(0, full.Length - 1); // convert exception from .gdc to .gd
                     File.WriteAllText(full, decompiled);
                 } else {

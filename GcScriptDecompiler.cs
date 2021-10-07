@@ -4,11 +4,8 @@ using System.IO;
 using System.Text;
 
 namespace GdTool {
-    public class GdcFile {
-        public uint Version { get; private set; }
-        public string Decompiled { get; private set; }
-
-        public GdcFile(byte[] arr, BytecodeProvider provider) {
+    public class GcScriptDecompiler {
+        public static string Decompile(byte[] arr, BytecodeProvider provider) {
             using (MemoryStream ms = new MemoryStream(arr)) {
                 using (BinaryReader buf = new BinaryReader(ms)) {
                     string magicHeader = Encoding.ASCII.GetString(buf.ReadBytes(4));
@@ -16,7 +13,10 @@ namespace GdTool {
                         throw new Exception("Invalid GDC file: missing magic header");
                     }
 
-                    Version = buf.ReadUInt32();
+                    uint version = buf.ReadUInt32();
+                    if (version != provider.BytecodeVersion) {
+                        throw new Exception("Invalid GDC file: bytecode version does not match supplied provider");
+                    }
                     uint identifierCount = buf.ReadUInt32();
                     uint constantCount = buf.ReadUInt32();
                     uint lineCount = buf.ReadUInt32();
@@ -66,12 +66,12 @@ namespace GdTool {
                         previous = token.Type;
                     }
 
-                    Decompiled = decompile.Content;
+                    return decompile.Content;
                 }
             }
         }
 
-        private void ReadToken(GdcToken token, string[] identifiers, IGdStructure[] constants) {
+        private static void ReadToken(GdcToken token, string[] identifiers, IGdStructure[] constants) {
             switch (token.Type) {
                 case GdcTokenType.Identifier:
                     token.Operand = new GdcIdentifier(identifiers[token.Data]);
@@ -84,7 +84,7 @@ namespace GdTool {
             }
         }
 
-        private IGdStructure DecodeConstant(BinaryReader buf, BytecodeProvider provider) {
+        private static IGdStructure DecodeConstant(BinaryReader buf, BytecodeProvider provider) {
             uint type = buf.ReadUInt32();
             uint typeWithoutFlags = type & 0xFF;
             string typeName = provider.TypeNameProvider.GetTypeName(typeWithoutFlags);
