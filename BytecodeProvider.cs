@@ -16,7 +16,7 @@ namespace GdTool {
     internal class V3TypeNameProvider : ITypeNameProvider {
         private static readonly string[] TypeNames = {
             "Nil", "bool", "int", "float", "String", "Vector2", "Rect2", "Vector3", "Transform2D",
-            "Plane", "AABB", "Quat", "Basis", "Transform", "Color", "RID", "Object", "NodePath",
+            "Plane", "Quat", "AABB", "Basis", "Transform", "Color", "NodePath", "RID", "Object",
             "Dictionary", "Array", "PoolByteArray", "PoolIntArray", "PoolRealArray", "PoolStringArray",
             "PoolVector2Array", "PoolVector3Array", "PoolColorArray"
         };

@@ -9,7 +9,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
 [assembly: AssemblyProduct("GdTool")]
-[assembly: AssemblyCopyright("Copyright © 2021 Lucas Baizer")]
+[assembly: AssemblyCopyright("Copyright 2021 Lucas Baizer")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 

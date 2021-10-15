@@ -40,9 +40,9 @@ namespace GdTool {
         }
     }
 
-    public class Nil : IGdStructure {
+    public class GdcNull : IGdStructure {
         public void Serialize(BinaryWriter buf, BytecodeProvider provider) {
-            buf.Write(provider.TypeNameProvider.GetTypeId("Nil"));
+            buf.Write(provider.TypeNameProvider.GetTypeId("null"));
             buf.Write(0U);
         }
 
@@ -55,7 +55,7 @@ namespace GdTool {
         }
 
         public override bool Equals(object obj) {
-            return obj is Nil;
+            return obj is GdcNull;
         }
 
         public override int GetHashCode() {
@@ -246,7 +246,9 @@ namespace GdTool {
 
         public override string ToString() {
             return "\"" +
-                Value.Replace("\n", "\\n")
+                Value
+                .Replace("\\", "\\\\")
+                .Replace("\n", "\\n")
                 .Replace("\r", "\\r")
                 .Replace("\t", "\\t")
                 .Replace("\f", "\\f")

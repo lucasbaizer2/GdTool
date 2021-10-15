@@ -1,6 +1,7 @@
 ﻿using CommandLine;
 using System;
 using System.IO;
+using System.Text;
 
 namespace GdTool {
     public class Program {
@@ -26,11 +27,6 @@ namespace GdTool {
         }
 
         static void Main(string[] args) {
-            byte[] compiled = GdScriptCompiler.Compile(File.ReadAllText(@"C:\Users\Lucas\Downloads\Godot RE Tools\tasteless-shores\game\player\player_controller.gd"), new BytecodeProvider(0x5565f55));
-            GdcFile file = new GdcFile(compiled, new BytecodeProvider(0x5565f55));
-            string decompiled = file.Decompiled;
-            Console.WriteLine(decompiled);
-
             Parser.Default.ParseArguments<DecodeOptions, BuildOptions>(args).WithParsed<DecodeOptions>(Decode).WithParsed<BuildOptions>(Build);
         }
 
@@ -78,30 +74,80 @@ namespace GdTool {
             for (int i = 0; i < pck.Entries.Count; i++) {
                 PckFileEntry entry = pck.Entries[i];
                 string path = entry.Path.Substring(6); // remove res://
-                string full = Path.Combine(outputDirectory, path);
-                string parent = Path.GetDirectoryName(full);
-                if (!Directory.Exists(parent)) {
-                    Directory.CreateDirectory(parent);
-                }
+                try {
+                    string full = Path.Combine(outputDirectory, path);
+                    string parent = Path.GetDirectoryName(full);
+                    if (!Directory.Exists(parent)) {
+                        Directory.CreateDirectory(parent);
+                    }
 
-                if (options.Decompile && path.EndsWith(".gdc")) {
-                    GdcFile file = new GdcFile(entry.Data, provider);
-                    string decompiled = file.Decompiled;
-                    full = full.Substring(0, full.Length - 1); // convert exception from .gdc to .gd
-                    File.WriteAllText(full, decompiled);
-                } else {
-                    File.WriteAllBytes(full, entry.Data);
-                }
-                File.WriteAllBytes(full, entry.Data);
+                    if (options.Decompile && path.EndsWith(".gdc")) {
+                        string decompiled = GdScriptDecompiler.Decompile(entry.Data, provider);
+                        full = full.Substring(0, full.Length - 1); // convert exception from .gdc to .gd
+                        File.WriteAllText(full, decompiled);
+                    } else {
+                        File.WriteAllBytes(full, entry.Data);
+                    }
 
-                int percentage = (int)Math.Floor((i + 1) / (double)pck.Entries.Count * 100.0);
-                Console.Write("\rUnpacking: " + (i + 1) + "/" + pck.Entries.Count + " (" + percentage + "%)");
+                    int percentage = (int)Math.Floor((i + 1) / (double)pck.Entries.Count * 100.0);
+                    Console.Write("\rUnpacking: " + (i + 1) + "/" + pck.Entries.Count + " (" + percentage + "%)");
+                } catch (Exception e) {
+                    Console.WriteLine("\nError while decoding file: " + path);
+                    Console.WriteLine(e);
+                    Environment.Exit(1);
+                }
             }
             Console.WriteLine();
         }
 
         private static void Build(BuildOptions options) {
+            if (!Directory.Exists(options.InputPath)) {
+                Console.WriteLine("Invalid directory (does not exist): " + options.InputPath);
+                return;
+            }
 
+            if (!File.Exists(Path.Combine(options.InputPath, "project.binary"))) {
+                Console.WriteLine("Invalid project (project.binary file not present in directory): " + options.InputPath);
+                return;
+            }
+
+            PckFile pck = new PckFile(1, 3, 3, 3);
+            BytecodeProvider provider = new BytecodeProvider(0x5565f55);
+            string[] files = Directory.GetFiles(options.InputPath, "*", SearchOption.AllDirectories);
+            pck.Entries.Capacity = files.Length;
+            for (int i = 0; i < files.Length; i++) {
+                string file = files[i];
+                string relative = Path.GetRelativePath(options.InputPath, file);
+                try {
+                    string withPrefix = "res://" + relative.Replace('\\', '/');
+                    byte[] contents = File.ReadAllBytes(file);
+                    if (relative.EndsWith(".gd")) {
+                        contents = GdScriptCompiler.Compile(Encoding.UTF8.GetString(contents), provider);
+                        withPrefix += "c"; // convert ".gd" to ".gdc"
+                    }
+                    pck.Entries.Add(new PckFileEntry {
+                        Path = withPrefix,
+                        Data = contents
+                    });
+
+                    int percentage = (int)Math.Floor((i + 1) / (double)files.Length * 100.0);
+                    Console.Write("\rPacking: " + (i + 1) + "/" + files.Length + " (" + percentage + "%)");
+                } catch (Exception e) {
+                    Console.WriteLine("\nError while building file: " + relative);
+                    Console.WriteLine(e);
+                    Environment.Exit(1);
+                }
+            }
+
+            Console.WriteLine();
+
+            byte[] serialized = pck.ToBytes();
+            string outputFile = options.InputPath + ".pck";
+            if (options.OutputFile != null) {
+                outputFile = options.OutputFile;
+            }
+            Console.WriteLine("Writing PCK file to disk... ");
+            File.WriteAllBytes(outputFile, serialized);
         }
     }
 }

@@ -44,6 +44,66 @@ namespace GdTool {
         }
     }
 
+    public class WildcardCompilerToken : ICompilerToken {
+        public virtual CompilerTokenData Parse(SourceCodeReader reader, BytecodeProvider provider) {
+            string peek = reader.Peek(2);
+            if (peek != null && peek == "_:") {
+                reader.Position += 2;
+                return new CompilerTokenData(this);
+            }
+            return null;
+        }
+
+        public void Write(BinaryWriter writer, BytecodeProvider provider, CompilerTokenData data) {
+            writer.Write((byte)provider.TokenTypeProvider.GetTokenId(GdcTokenType.Wildcard));
+            writer.Write((byte)provider.TokenTypeProvider.GetTokenId(GdcTokenType.Colon));
+        }
+    }
+
+    public class NewlineCompilerToken : ICompilerToken {
+        public virtual CompilerTokenData Parse(SourceCodeReader reader, BytecodeProvider provider) {
+            string newlineCharacter = null;
+
+            string peek = reader.Peek(1);
+            if (peek != null && peek == "\n") {
+                newlineCharacter = "\n";
+            }
+            if (newlineCharacter == null) {
+                peek = reader.Peek(2);
+                if (peek != null && peek == "\r\n") {
+                    newlineCharacter = "\r\n";
+                }
+            }
+
+            if (newlineCharacter == null) {
+                return null;
+            }
+
+            reader.Position += newlineCharacter.Length;
+
+            uint indentation = 0;
+            while (true) {
+                string indentChar = reader.Peek(1);
+                if (indentChar == " ") {
+                    throw new Exception("gdtool compiler requires tabs instead of spaces");
+                } else if (indentChar == "\t") {
+                    indentation++;
+                    reader.Position += 1;
+                } else {
+                    break;
+                }
+            }
+
+            return new CompilerTokenData(this) {
+                Data = indentation
+            };
+        }
+
+        public void Write(BinaryWriter writer, BytecodeProvider provider, CompilerTokenData data) {
+            writer.Write(provider.TokenTypeProvider.GetTokenId(GdcTokenType.Newline) | (data.Data << 8) | 0x80);
+        }
+    }
+
     public class KeywordCompilerToken : BasicCompilerToken {
         public KeywordCompilerToken(GdcTokenType? type, string value) : base(type, value) { }
 
@@ -228,6 +288,11 @@ namespace GdTool {
                     numberBuffer.Append(next[0]);
                     reader.Position++;
                 }
+            } else if (reader.Peek(4) != null && reader.Peek(4) == "null") {
+                reader.Position += 4;
+                return new CompilerTokenData(this) {
+                    Operand = new GdcNull()
+                };
             }
 
             return null;

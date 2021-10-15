@@ -1,121 +1,11 @@
 ﻿using System;
-using System.IO;
 
 namespace GdTool {
-    public enum GdcTokenType {
-        Empty,
-        Identifier,
-        Constant,
-        Self,
-        BuiltInType,
-        BuiltInFunc,
-        OpIn,
-        OpEqual,
-        OpNotEqual,
-        OpLess,
-        OpLessEqual,
-        OpGreater,
-        OpGreaterEqual,
-        OpAnd,
-        OpOr,
-        OpNot,
-        OpAdd,
-        OpSub,
-        OpMul,
-        OpDiv,
-        OpMod,
-        OpShiftLeft,
-        OpShiftRight,
-        OpAssign,
-        OpAssignAdd,
-        OpAssignSub,
-        OpAssignMul,
-        OpAssignDiv,
-        OpAssignMod,
-        OpAssignShiftLeft,
-        OpAssignShiftRight,
-        OpAssignBitAnd,
-        OpAssignBitOr,
-        OpAssignBitXor,
-        OpBitAnd,
-        OpBitOr,
-        OpBitXor,
-        OpBitInvert,
-        CfIf,
-        CfElif,
-        CfElse,
-        CfFor,
-        CfWhile,
-        CfBreak,
-        CfContinue,
-        CfPass,
-        CfReturn,
-        CfMatch,
-        PrFunction,
-        PrClass,
-        PrClassName,
-        PrExtends,
-        PrIs,
-        PrOnready,
-        PrTool,
-        PrStatic,
-        PrExport,
-        PrSetget,
-        PrConst,
-        PrVar,
-        PrAs,
-        PrVoid,
-        PrEnum,
-        PrPreload,
-        PrAssert,
-        PrYield,
-        PrSignal,
-        PrBreakpoint,
-        PrRemote,
-        PrSync,
-        PrMaster,
-        PrSlave,
-        PrPuppet,
-        PrRemotesync,
-        PrMastersync,
-        PrPuppetsync,
-        BracketOpen,
-        BracketClose,
-        CurlyBracketOpen,
-        CurlyBracketClose,
-        ParenthesisOpen,
-        ParenthesisClose,
-        Comma,
-        Semicolon,
-        Period,
-        QuestionMark,
-        Colon,
-        Dollar,
-        ForwardArrow,
-        Newline,
-        ConstPi,
-        ConstTau,
-        Wildcard,
-        ConstInf,
-        ConstNan,
-        Error,
-        Eof,
-        Cursor,
-        Max
-    }
-
     public class GdcToken {
         public uint LineCol;
         public IGdStructure Operand;
         public GdcTokenType Type;
         public uint Data;
-
-        public void Compile(BinaryWriter writer, BytecodeProvider provider) {
-            writer.Write(provider.TokenTypeProvider.GetTokenId(Type) & (Data << 8));
-            if (Operand != null) {
-                Operand.Serialize(writer, provider);
-            }
-        }
 
         public DecompileBuffer Decompile(DecompileBuffer buf, GdcTokenType previous, BytecodeProvider provider) {
             switch (Type) {
@@ -304,11 +194,11 @@ namespace GdTool {
                 case GdcTokenType.QuestionMark:
                     return buf.Append("?");
                 case GdcTokenType.Colon:
-                    return buf.Append(":");
+                    return buf.Append(": ");
                 case GdcTokenType.Dollar:
                     return buf.Append("$");
                 case GdcTokenType.ForwardArrow:
-                    return buf.Append("->");
+                    return buf.AppendOp("->");
                 case GdcTokenType.Newline:
                     buf.Indentation = (int)Data;
                     buf.AppendNewLine();
@@ -318,7 +208,7 @@ namespace GdTool {
                 case GdcTokenType.ConstTau:
                     return buf.Append("TAU");
                 case GdcTokenType.Wildcard:
-                    return buf.Append("*");
+                    return buf.Append("_");
                 case GdcTokenType.ConstInf:
                     return buf.Append("INF");
                 case GdcTokenType.ConstNan:
@@ -332,9 +222,5 @@ namespace GdTool {
                     throw new NotImplementedException(Type.ToString());
             }
         }
-    }
-
-    public class TokenTree {
-
     }
 }

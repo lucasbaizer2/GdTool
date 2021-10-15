@@ -18,6 +18,14 @@ namespace GdTool {
         public uint VersionPatch;
         public List<PckFileEntry> Entries;
 
+        public PckFile(uint packFormatVersion, uint versionMajor, uint versionMinor, uint versionPatch) {
+            PackFormatVersion = packFormatVersion;
+            VersionMajor = versionMajor;
+            VersionMinor = versionMinor;
+            VersionPatch = versionPatch;
+            Entries = new List<PckFileEntry>();
+        }
+
         public PckFile(byte[] arr) {
             using (MemoryStream ms = new MemoryStream(arr)) {
                 using (BinaryReader buf = new BinaryReader(ms)) {

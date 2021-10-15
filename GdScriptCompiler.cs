@@ -12,8 +12,7 @@ namespace GdTool {
         };
 
         private static readonly List<ICompilerToken> CompilerTokens = new List<ICompilerToken>() {
-            new BasicCompilerToken(GdcTokenType.Newline, "\r\n"),
-            new BasicCompilerToken(GdcTokenType.Newline, "\n"),
+            new NewlineCompilerToken(),
             new KeywordCompilerToken(GdcTokenType.CfIf, "if"),
             new KeywordCompilerToken(GdcTokenType.CfElif, "elif"),
             new KeywordCompilerToken(GdcTokenType.CfElse, "else"),
@@ -54,6 +53,7 @@ namespace GdTool {
             new KeywordCompilerToken(GdcTokenType.PrIs, "is"),
             new KeywordCompilerToken(GdcTokenType.Self, "self"),
             new KeywordCompilerToken(GdcTokenType.OpIn, "in"),
+            new WildcardCompilerToken(),
             new BasicCompilerToken(GdcTokenType.Comma, ","),
             new BasicCompilerToken(GdcTokenType.Semicolon, ";"),
             new BasicCompilerToken(GdcTokenType.Period, "."),
@@ -115,16 +115,20 @@ namespace GdTool {
         }
 
         public static byte[] Compile(string source, BytecodeProvider provider) {
-            SourceCodeReader reader = new SourceCodeReader(source);
+            SourceCodeReader reader = new SourceCodeReader(source.Trim());
             List<CompilerTokenData> tokens = new List<CompilerTokenData>();
             while (reader.HasRemaining) {
                 bool foundToken = false;
                 foreach (ICompilerToken token in CompilerTokens) {
-                    CompilerTokenData data = token.Parse(reader, provider);
-                    if (data != null) {
-                        tokens.Add(data);
-                        foundToken = true;
-                        break;
+                    try {
+                        CompilerTokenData data = token.Parse(reader, provider);
+                        if (data != null) {
+                            tokens.Add(data);
+                            foundToken = true;
+                            break;
+                        }
+                    } catch (Exception e) {
+                        throw new Exception("Error on line " + reader.CurrentRow, e);
                     }
                 }
                 if (!foundToken) {
@@ -133,9 +137,15 @@ namespace GdTool {
             }
 
             tokens = tokens.Where(token => !CompilerMetatokens.Contains(token.Creator)).ToList();
+            tokens.Add(new CompilerTokenData(new BasicCompilerToken(GdcTokenType.Eof, null)));
 
             List<string> identifiers = new List<string>();
-            foreach (CompilerTokenData data in tokens) {
+            List<IGdStructure> constants = new List<IGdStructure>();
+            List<uint> linesList = new List<uint> {
+                0
+            };
+            for (uint i = 0; i < tokens.Count; i++) {
+                CompilerTokenData data = tokens[(int)i];
                 if (data.Creator is IdentifierCompilerToken) {
                     GdcIdentifier ident = (GdcIdentifier)data.Operand;
                     int index = identifiers.IndexOf(ident.Identifier);
@@ -145,12 +155,7 @@ namespace GdTool {
                     } else {
                         data.Data = (uint)index;
                     }
-                }
-            }
-
-            List<IGdStructure> constants = new List<IGdStructure>();
-            foreach (CompilerTokenData data in tokens) {
-                if (data.Creator is ConstantCompilerToken) {
+                } else if (data.Creator is ConstantCompilerToken) {
                     int index = constants.IndexOf(data.Operand);
                     if (index == -1) {
                         data.Data = (uint)constants.Count;
@@ -158,6 +163,8 @@ namespace GdTool {
                     } else {
                         data.Data = (uint)index;
                     }
+                } else if (data.Creator is NewlineCompilerToken) {
+                    linesList.Add(i);
                 }
             }
 
@@ -167,16 +174,34 @@ namespace GdTool {
                     buf.Write(provider.BytecodeVersion); // version
                     buf.Write((uint)identifiers.Count); // identifiers count
                     buf.Write((uint)constants.Count); // constants count
-                    buf.Write(0U); // TODO: line count
+                    buf.Write((uint)linesList.Count); // line count
                     buf.Write((uint)tokens.Count); // tokens count
 
                     // write identifiers
                     foreach (string ident in identifiers) {
                         byte[] encoded = Encoding.UTF8.GetBytes(ident);
-                        buf.Write((uint)encoded.Length);
+
+                        long lengthPos = ms.Position;
+                        buf.Write(0U);
                         foreach (byte val in encoded) {
                             buf.Write((byte)(val ^ 0xB6));
                         }
+
+                        uint padding = 0;
+                        if (ms.Position % 4 == 0) { // add four bytes of null termination
+                            for (int i = 0; i < 4; i++) {
+                                buf.Write((byte)(0x00 ^ 0xB6)); // padding null bytes
+                                padding++;
+                            }
+                        }
+                        while (ms.Position % 4 != 0) {
+                            buf.Write((byte)(0x00 ^ 0xB6)); // padding null bytes
+                            padding++;
+                        }
+                        long currentPos = ms.Position;
+                        ms.Position = lengthPos;
+                        buf.Write((uint)(encoded.Length + padding));
+                        ms.Position = currentPos;
                     }
 
                     // write constants
@@ -185,7 +210,10 @@ namespace GdTool {
                     }
 
                     // write lines
-                    // TODO
+                    for (uint i = 0; i < linesList.Count; i++) {
+                        buf.Write(linesList[(int)i]);
+                        buf.Write(i + 1);
+                    }
 
                     // write tokens
                     foreach (CompilerTokenData token in tokens) {
