@@ -27,6 +27,10 @@ namespace GdTool {
         }
 
         static void Main(string[] args) {
+            byte[] compiled = GdScriptCompiler.Compile(File.ReadAllText(@"C:\Users\Lucas\Downloads\Godot RE Tools\tasteless-shores\game\player\player_controller.gd"), new BytecodeProvider(0x5565f55));
+            string decompiled = GdScriptDecompiler.Decompile(compiled, new BytecodeProvider(0x5565f55));
+            Console.WriteLine(decompiled);
+
             Parser.Default.ParseArguments<DecodeOptions, BuildOptions>(args).WithParsed<DecodeOptions>(Decode).WithParsed<BuildOptions>(Build);
         }
 
