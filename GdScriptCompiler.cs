@@ -6,12 +6,13 @@ using System.Linq;
 
 namespace GdTool {
     public class GdScriptCompiler {
-        private static readonly List<ICompilerToken> CompilerMetatokens = new List<ICompilerToken>() {
+        private static readonly List<ICompilerParsable> CompilerMetatokens = new List<ICompilerParsable>() {
             new BasicCompilerToken(null, " "), // Space
             new BasicCompilerToken(null, "\t"), // Tab
+            new CommentCompilerToken()
         };
 
-        private static readonly List<ICompilerToken> CompilerTokens = new List<ICompilerToken>() {
+        private static readonly List<ICompilerParsable> CompilerTokens = new List<ICompilerParsable>() {
             new NewlineCompilerToken(),
             new KeywordCompilerToken(GdcTokenType.CfIf, "if"),
             new KeywordCompilerToken(GdcTokenType.CfElif, "elif"),
@@ -68,6 +69,8 @@ namespace GdTool {
             new BasicCompilerToken(GdcTokenType.OpAssignMod, "+="),
             new BasicCompilerToken(GdcTokenType.OpAssignShiftLeft, "<<="),
             new BasicCompilerToken(GdcTokenType.OpAssignShiftRight, ">>="),
+            new BasicCompilerToken(GdcTokenType.OpShiftLeft, "<<"),
+            new BasicCompilerToken(GdcTokenType.OpShiftRight, ">>"),
             new BasicCompilerToken(GdcTokenType.OpAssignBitAnd, "&="),
             new BasicCompilerToken(GdcTokenType.OpAssignBitOr, "|="),
             new BasicCompilerToken(GdcTokenType.OpAssignBitXor, "^="),
@@ -85,8 +88,6 @@ namespace GdTool {
             new BasicCompilerToken(GdcTokenType.OpMul, "*"),
             new BasicCompilerToken(GdcTokenType.OpDiv, "/"),
             new BasicCompilerToken(GdcTokenType.OpMod, "%"),
-            new BasicCompilerToken(GdcTokenType.OpShiftLeft, "<<"),
-            new BasicCompilerToken(GdcTokenType.OpShiftRight, ">>"),
             new BasicCompilerToken(GdcTokenType.OpBitAnd, "&"),
             new BasicCompilerToken(GdcTokenType.OpBitOr, "|"),
             new BasicCompilerToken(GdcTokenType.OpBitXor, "^"),
@@ -119,7 +120,7 @@ namespace GdTool {
             List<CompilerTokenData> tokens = new List<CompilerTokenData>();
             while (reader.HasRemaining) {
                 bool foundToken = false;
-                foreach (ICompilerToken token in CompilerTokens) {
+                foreach (ICompilerParsable token in CompilerTokens) {
                     try {
                         CompilerTokenData data = token.Parse(reader, provider);
                         if (data != null) {
@@ -217,7 +218,8 @@ namespace GdTool {
 
                     // write tokens
                     foreach (CompilerTokenData token in tokens) {
-                        token.Creator.Write(buf, provider, token);
+                        ICompilerToken creator = (ICompilerToken)token.Creator;
+                        creator.Write(buf, provider, token);
                     }
 
                     return ms.ToArray();

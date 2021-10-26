@@ -124,7 +124,7 @@ namespace GdTool {
                 case GdcTokenType.PrClassName:
                     return buf.Append("class_name ");
                 case GdcTokenType.PrExtends:
-                    return buf.Append("extends ");
+                    return buf.AppendOp("extends");
                 case GdcTokenType.PrIs:
                     return buf.AppendOp("is");
                 case GdcTokenType.PrOnready:

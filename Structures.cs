@@ -42,11 +42,12 @@ namespace GdTool {
 
     public class GdcNull : IGdStructure {
         public void Serialize(BinaryWriter buf, BytecodeProvider provider) {
-            buf.Write(provider.TypeNameProvider.GetTypeId("null"));
-            buf.Write(0U);
+            buf.Write(provider.TypeNameProvider.GetTypeId("Nil"));
+            // buf.Write(0U);
         }
 
         public IGdStructure Deserialize(BinaryReader reader) {
+            // reader.BaseStream.Position += 4;
             return this;
         }
 

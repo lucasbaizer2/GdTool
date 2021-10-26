@@ -92,7 +92,7 @@ namespace GdTool {
         public uint BytecodeVersion;
 
         public BytecodeProvider(uint commitHash) {
-            byte[] jsonBytes = ReadEmbeddedSource("GdTool.Resources.bytecode_" + commitHash.ToString("x") + ".json");
+            byte[] jsonBytes = ReadEmbeddedResource("GdTool.Resources.bytecode_" + commitHash.ToString("x") + ".json");
             if (jsonBytes == null) {
                 throw new InvalidOperationException("Invalid commit hash: " + commitHash.ToString("x"));
             }
@@ -112,7 +112,7 @@ namespace GdTool {
             BytecodeVersion = file.BytecodeVersion;
         }
 
-        private static byte[] ReadEmbeddedSource(string name) {
+        private static byte[] ReadEmbeddedResource(string name) {
             Assembly assembly = Assembly.GetExecutingAssembly();
             if (assembly.GetManifestResourceInfo(name) == null) {
                 return null;

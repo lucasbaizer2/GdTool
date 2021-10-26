@@ -21,7 +21,7 @@ namespace GdTool {
         }
 
         public DecompileBuffer AppendOp(string val) {
-            if (Text.Length > 0 && Text[Text.Length - 1] != ' ') {
+            if (Text.Length >= 1 && Text[Text.Length - 1] != ' ' && Text[Text.Length - 1] != '\n') {
                 Text.Append(' ');
             }
             Text.Append(val);

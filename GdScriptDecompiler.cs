@@ -5,7 +5,7 @@ using System.Text;
 
 namespace GdTool {
     public class GdScriptDecompiler {
-        public static string Decompile(byte[] arr, BytecodeProvider provider) {
+        public static string Decompile(byte[] arr, BytecodeProvider provider, bool debug = false) {
             using (MemoryStream ms = new MemoryStream(arr)) {
                 using (BinaryReader buf = new BinaryReader(ms)) {
                     string magicHeader = Encoding.ASCII.GetString(buf.ReadBytes(4));
@@ -44,7 +44,7 @@ namespace GdTool {
                     }
 
                     DecompileBuffer decompile = new DecompileBuffer();
-                    GdcTokenType previous = GdcTokenType.Newline;
+                    List<GdcToken> tokens = new List<GdcToken>((int)tokenCount);
                     for (int i = 0; i < tokenCount; i++) {
                         byte cur = arr[buf.BaseStream.Position];
 
@@ -60,9 +60,16 @@ namespace GdTool {
                             Type = provider.TokenTypeProvider.GetTokenType(tokenType & 0xFF),
                             Data = tokenType >> 8
                         };
+                        tokens.Add(token);
                         ReadToken(token, identifiers, constants);
+                    }
 
+                    GdcTokenType previous = GdcTokenType.Newline;
+                    foreach (GdcToken token in tokens) {
                         token.Decompile(decompile, previous, provider);
+                        if (debug) {
+                            decompile.Append("{" + token.Type + "}");
+                        }
                         previous = token.Type;
                     }
 
@@ -86,8 +93,7 @@ namespace GdTool {
 
         private static IGdStructure DecodeConstant(BinaryReader buf, BytecodeProvider provider) {
             uint type = buf.ReadUInt32();
-            uint typeWithoutFlags = type & 0xFF;
-            string typeName = provider.TypeNameProvider.GetTypeName(typeWithoutFlags);
+            string typeName = provider.TypeNameProvider.GetTypeName(type & 0xFF);
 
             switch (typeName) {
                 case "Nil":

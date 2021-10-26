@@ -4,19 +4,43 @@ using System.Text;
 
 namespace GdTool {
     public class CompilerTokenData {
-        public ICompilerToken Creator;
+        public ICompilerParsable Creator;
         public uint Data;
         public IGdStructure Operand;
 
-        public CompilerTokenData(ICompilerToken creator) {
+        private CompilerTokenData() { }
+
+        public CompilerTokenData(ICompilerParsable creator) {
             Creator = creator;
         }
     }
 
-    public interface ICompilerToken {
+    public interface ICompilerParsable {
         CompilerTokenData Parse(SourceCodeReader reader, BytecodeProvider provider);
+    }
 
+    public interface ICompilerToken : ICompilerParsable {
         void Write(BinaryWriter writer, BytecodeProvider provider, CompilerTokenData data);
+    }
+
+    public class CommentCompilerToken : ICompilerParsable {
+        public CompilerTokenData Parse(SourceCodeReader reader, BytecodeProvider provider) {
+            string commentStart = reader.Peek(1);
+            if (commentStart == "#") {
+                reader.Position++;
+                while (true) {
+                    string next = reader.Peek(1);
+                    if (next == null) {
+                        reader.Position++;
+                        return new CompilerTokenData(this);
+                    } else if (next == "\r" || next == "\n") {
+                        return new CompilerTokenData(this);
+                    }
+                    reader.Position++;
+                }
+            }
+            return null;
+        }
     }
 
     public class BasicCompilerToken : ICompilerToken {
@@ -129,9 +153,14 @@ namespace GdTool {
                 string peek = reader.Peek(func.Length);
                 if (peek != null && peek == func) {
                     reader.Position += func.Length;
-                    return new CompilerTokenData(this) {
-                        Data = i
-                    };
+                    string nextChar = reader.Peek(1);
+                    if (nextChar == null || (!char.IsLetterOrDigit(nextChar[0]) && nextChar[0] != '_')) {
+                        return new CompilerTokenData(this) {
+                            Data = i
+                        };
+                    } else {
+                        reader.Position -= func.Length;
+                    }
                 }
             }
             return null;
@@ -150,9 +179,14 @@ namespace GdTool {
                 string peek = reader.Peek(type.Length);
                 if (peek != null && peek == type) {
                     reader.Position += type.Length;
-                    return new CompilerTokenData(this) {
-                        Data = i
-                    };
+                    string nextChar = reader.Peek(1);
+                    if (nextChar == null || (!char.IsLetterOrDigit(nextChar[0]) && nextChar[0] != '_')) {
+                        return new CompilerTokenData(this) {
+                            Data = i
+                        };
+                    } else {
+                        reader.Position -= type.Length;
+                    }
                 }
             }
             return null;
@@ -292,6 +326,20 @@ namespace GdTool {
                 reader.Position += 4;
                 return new CompilerTokenData(this) {
                     Operand = new GdcNull()
+                };
+            } else if (reader.Peek(4) != null && reader.Peek(4) == "true") {
+                reader.Position += 4;
+                return new CompilerTokenData(this) {
+                    Operand = new GdcBool {
+                        Value = true
+                    }
+                };
+            } else if (reader.Peek(5) != null && reader.Peek(5) == "false") {
+                reader.Position += 5;
+                return new CompilerTokenData(this) {
+                    Operand = new GdcBool {
+                        Value = true
+                    }
                 };
             }
 
