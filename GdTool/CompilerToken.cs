@@ -63,7 +63,11 @@ namespace GdTool {
 
         public void Write(BinaryWriter writer, BytecodeProvider provider, CompilerTokenData data) {
             if (Type != null) {
-                writer.Write((byte)provider.TokenTypeProvider.GetTokenId(Type.Value));
+                int id = provider.TokenTypeProvider.GetTokenId(Type.Value);
+                if (id == -1) {
+                    throw new Exception($"token type {Type.Value} not implemented for supplied bytecode version");
+                }
+                writer.Write((byte)id);
             }
         }
     }
@@ -124,7 +128,7 @@ namespace GdTool {
         }
 
         public void Write(BinaryWriter writer, BytecodeProvider provider, CompilerTokenData data) {
-            writer.Write(provider.TokenTypeProvider.GetTokenId(GdcTokenType.Newline) | (data.Data << 8) | 0x80);
+            writer.Write((uint)provider.TokenTypeProvider.GetTokenId(GdcTokenType.Newline) | (data.Data << 8) | 0x80);
         }
     }
 
@@ -148,8 +152,8 @@ namespace GdTool {
 
     public class BuiltInFuncCompilerToken : ICompilerToken {
         public CompilerTokenData Parse(SourceCodeReader reader, BytecodeProvider provider) {
-            for (uint i = 0; i < provider.BuiltInFunctions.Length; i++) {
-                string func = provider.BuiltInFunctions[i];
+            for (uint i = 0; i < provider.ProviderData.FunctionNames.Length; i++) {
+                string func = provider.ProviderData.FunctionNames[i];
                 string peek = reader.Peek(func.Length);
                 if (peek != null && peek == func) {
                     reader.Position += func.Length;
@@ -167,7 +171,7 @@ namespace GdTool {
         }
 
         public void Write(BinaryWriter writer, BytecodeProvider provider, CompilerTokenData data) {
-            writer.Write(provider.TokenTypeProvider.GetTokenId(GdcTokenType.BuiltInFunc) | (data.Data << 8) | 0x80);
+            writer.Write((uint)provider.TokenTypeProvider.GetTokenId(GdcTokenType.BuiltInFunc) | (data.Data << 8) | 0x80);
         }
     }
 
@@ -193,7 +197,7 @@ namespace GdTool {
         }
 
         public void Write(BinaryWriter writer, BytecodeProvider provider, CompilerTokenData data) {
-            writer.Write(provider.TokenTypeProvider.GetTokenId(GdcTokenType.BuiltInType) | (data.Data << 8) | 0x80);
+            writer.Write((uint)provider.TokenTypeProvider.GetTokenId(GdcTokenType.BuiltInType) | (data.Data << 8) | 0x80);
         }
     }
 
@@ -220,7 +224,7 @@ namespace GdTool {
         }
 
         public void Write(BinaryWriter writer, BytecodeProvider provider, CompilerTokenData data) {
-            writer.Write(provider.TokenTypeProvider.GetTokenId(GdcTokenType.Identifier) | (data.Data << 8) | 0x80);
+            writer.Write((uint)provider.TokenTypeProvider.GetTokenId(GdcTokenType.Identifier) | (data.Data << 8) | 0x80);
         }
     }
 
@@ -338,7 +342,7 @@ namespace GdTool {
                 reader.Position += 5;
                 return new CompilerTokenData(this) {
                     Operand = new GdcBool {
-                        Value = true
+                        Value = false
                     }
                 };
             }
@@ -347,7 +351,7 @@ namespace GdTool {
         }
 
         public void Write(BinaryWriter writer, BytecodeProvider provider, CompilerTokenData data) {
-            writer.Write(provider.TokenTypeProvider.GetTokenId(GdcTokenType.Constant) | (data.Data << 8) | 0x80);
+            writer.Write((uint)provider.TokenTypeProvider.GetTokenId(GdcTokenType.Constant) | (data.Data << 8) | 0x80);
         }
     }
 }

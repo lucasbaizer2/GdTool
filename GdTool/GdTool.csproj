@@ -1,0 +1,77 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="packages\Costura.Fody.5.6.0\build\Costura.Fody.props" Condition="Exists('packages\Costura.Fody.5.6.0\build\Costura.Fody.props')" />
+  <PropertyGroup>
+    <TargetFramework>net5.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Remove="Resources\BytecodeProviders\bytecode_054a2ac.json" />
+    <None Remove="Resources\BytecodeProviders\bytecode_1a36141.json" />
+    <None Remove="Resources\BytecodeProviders\bytecode_2185c01.json" />
+    <None Remove="Resources\BytecodeProviders\bytecode_23441ec.json" />
+    <None Remove="Resources\BytecodeProviders\bytecode_30c1229.json" />
+    <None Remove="Resources\BytecodeProviders\bytecode_48f1d02.json" />
+    <None Remove="Resources\BytecodeProviders\bytecode_514a3fb.json" />
+    <None Remove="Resources\BytecodeProviders\bytecode_6174585.json" />
+    <None Remove="Resources\BytecodeProviders\bytecode_64872ca.json" />
+    <None Remove="Resources\BytecodeProviders\bytecode_65d48d6.json" />
+    <None Remove="Resources\BytecodeProviders\bytecode_7124599.json" />
+    <None Remove="Resources\BytecodeProviders\bytecode_7d2d144.json" />
+    <None Remove="Resources\BytecodeProviders\bytecode_97f34a1.json" />
+    <None Remove="Resources\BytecodeProviders\bytecode_be46be7.json" />
+    <None Remove="Resources\bytecode_0b806ee.json" />
+    <None Remove="Resources\bytecode_31ce3c5.json" />
+    <None Remove="Resources\bytecode_703004f.json" />
+    <None Remove="Resources\bytecode_8c1731b.json" />
+    <None Remove="Resources\bytecode_8cab401.json" />
+    <None Remove="Resources\bytecode_e82dc40.json" />
+    <None Remove="Resources\CommitHistories\3.3.json" />
+    <None Remove="Resources\CommitHistories\3.x.json" />
+    <None Remove="Resources\CommitHistories\master.json" />
+    <None Remove="Resources\CommitHistory.json" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\BytecodeProviders\bytecode_514a3fb.json" />
+    <EmbeddedResource Include="Resources\BytecodeProviders\bytecode_1a36141.json" />
+    <EmbeddedResource Include="Resources\BytecodeProviders\bytecode_054a2ac.json" />
+    <EmbeddedResource Include="Resources\BytecodeProviders\bytecode_7124599.json" />
+    <EmbeddedResource Include="Resources\BytecodeProviders\bytecode_23441ec.json" />
+    <EmbeddedResource Include="Resources\BytecodeProviders\bytecode_6174585.json" />
+    <EmbeddedResource Include="Resources\BytecodeProviders\bytecode_64872ca.json" />
+    <EmbeddedResource Include="Resources\BytecodeProviders\bytecode_7d2d144.json" />
+    <EmbeddedResource Include="Resources\BytecodeProviders\bytecode_30c1229.json" />
+    <EmbeddedResource Include="Resources\BytecodeProviders\bytecode_48f1d02.json" />
+    <EmbeddedResource Include="Resources\BytecodeProviders\bytecode_65d48d6.json" />
+    <EmbeddedResource Include="Resources\BytecodeProviders\bytecode_be46be7.json" />
+    <EmbeddedResource Include="Resources\BytecodeProviders\bytecode_97f34a1.json" />
+    <EmbeddedResource Include="Resources\BytecodeProviders\bytecode_2185c01.json" />
+    <EmbeddedResource Include="Resources\BytecodeProviders\bytecode_e82dc40.json" />
+    <EmbeddedResource Include="Resources\BytecodeProviders\bytecode_8cab401.json" />
+    <EmbeddedResource Include="Resources\BytecodeProviders\bytecode_703004f.json" />
+    <EmbeddedResource Include="Resources\BytecodeProviders\bytecode_31ce3c5.json" />
+    <EmbeddedResource Include="Resources\BytecodeProviders\bytecode_8c1731b.json" />
+    <EmbeddedResource Include="Resources\BytecodeProviders\bytecode_0b806ee.json" />
+    <EmbeddedResource Include="Resources\BytecodeProviders\bytecode_5565f55.json" />
+    <EmbeddedResource Include="Resources\CommitHistories\3.x.json" />
+    <EmbeddedResource Include="Resources\CommitHistories\master.json" />
+    <EmbeddedResource Include="Resources\CommitHistories\3.3.json" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="FodyWeavers.xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="CommandLineParser" Version="2.8.0" />
+    <PackageReference Include="Costura.Fody" Version="5.6.0" />
+    <PackageReference Include="Fody" Version="6.5.3" />
+    <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
+    <PackageReference Include="System.ComponentModel.Composition" Version="5.0.0" />
+    <PackageReference Include="System.Data.DataSetExtensions" Version="4.5.0" />
+    <PackageReference Include="Microsoft.DotNet.UpgradeAssistant.Extensions.Default.Analyzers" Version="0.3.246501">
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+  </ItemGroup>
+  <Import Project="packages\Fody.6.5.3\build\Fody.targets" Condition="Exists('packages\Fody.6.5.3\build\Fody.targets')" />
+  <Import Project="packages\Costura.Fody.5.6.0\build\Costura.Fody.targets" Condition="Exists('packages\Costura.Fody.5.6.0\build\Costura.Fody.targets')" />
+</Project>

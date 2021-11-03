@@ -20,7 +20,7 @@ namespace GdTool {
                 case GdcTokenType.BuiltInType:
                     return buf.Append(provider.TypeNameProvider.GetTypeName(Data));
                 case GdcTokenType.BuiltInFunc:
-                    return buf.Append(provider.BuiltInFunctions[Data]);
+                    return buf.Append(provider.ProviderData.FunctionNames[Data]);
                 case GdcTokenType.OpIn:
                     return buf.AppendOp("in");
                 case GdcTokenType.OpEqual:

@@ -14,8 +14,8 @@ namespace GdTool {
                     }
 
                     uint version = buf.ReadUInt32();
-                    if (version != provider.BytecodeVersion) {
-                        throw new Exception("Invalid GDC file: expected bytecode version " + provider.BytecodeVersion + ", found " + version);
+                    if (version != provider.ProviderData.BytecodeVersion) {
+                        throw new Exception("Invalid GDC file: expected bytecode version " + provider.ProviderData.BytecodeVersion + ", found " + version);
                     }
                     uint identifierCount = buf.ReadUInt32();
                     uint constantCount = buf.ReadUInt32();

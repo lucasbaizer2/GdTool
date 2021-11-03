@@ -138,7 +138,9 @@ namespace GdTool {
             }
 
             tokens = tokens.Where(token => !CompilerMetatokens.Contains(token.Creator)).ToList();
+            tokens.Add(new CompilerTokenData(new NewlineCompilerToken()));
             tokens.Add(new CompilerTokenData(new BasicCompilerToken(GdcTokenType.Eof, null)));
+            tokens.Add(new CompilerTokenData(new BasicCompilerToken(GdcTokenType.Empty, null)));
 
             List<string> identifiers = new List<string>();
             List<IGdStructure> constants = new List<IGdStructure>();
@@ -172,7 +174,7 @@ namespace GdTool {
             using (MemoryStream ms = new MemoryStream()) {
                 using (BinaryWriter buf = new BinaryWriter(ms)) {
                     buf.Write(Encoding.ASCII.GetBytes("GDSC")); // magic header
-                    buf.Write(provider.BytecodeVersion); // version
+                    buf.Write(provider.ProviderData.BytecodeVersion); // version
                     buf.Write((uint)identifiers.Count); // identifiers count
                     buf.Write((uint)constants.Count); // constants count
                     buf.Write((uint)linesList.Count); // line count
