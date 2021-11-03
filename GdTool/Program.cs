@@ -10,7 +10,7 @@ namespace GdTool {
             [Option('i', "in", Required = true, HelpText = "The PCK file to extract.")]
             public string InputPath { get; set; }
 
-            [Option('b', "bytecode-version", Required = true, HelpText = "The commit hash of the bytecode version to use.")]
+            [Option('b', "bytecode-version", HelpText = "The commit hash of the bytecode version to use.")]
             public string BytecodeVersion { get; set; }
 
             [Option('d', "decompile", Required = false, HelpText = "Decompiles GDC files when in decode mode.")]
@@ -25,7 +25,7 @@ namespace GdTool {
             [Option('i', "in", Required = true, HelpText = "The directory to pack.")]
             public string InputPath { get; set; }
 
-            [Option('b', "bytecode-version", Required = true, HelpText = "The commit hash of the bytecode version to use.")]
+            [Option('b', "bytecode-version", HelpText = "The commit hash of the bytecode version to use.")]
             public string BytecodeVersion { get; set; }
 
             [Option('o', "out", Required = false, HelpText = "Output file to place the PCK.")]
@@ -85,7 +85,14 @@ namespace GdTool {
 
             Console.WriteLine("success.");
 
-            BytecodeProvider provider = BytecodeProvider.GetByCommitHash(options.BytecodeVersion);
+            BytecodeProvider provider = null;
+            if (options.Decompile) {
+                if (options.BytecodeVersion == null) {
+                    Console.WriteLine("Bytecode version must be supplied to decompile.");
+                    return;
+                }
+                provider = BytecodeProvider.GetByCommitHash(options.BytecodeVersion);
+            }
             for (int i = 0; i < pck.Entries.Count; i++) {
                 PckFileEntry entry = pck.Entries[i];
                 string path = entry.Path.Substring(6); // remove res://
@@ -127,7 +134,10 @@ namespace GdTool {
             }
 
             PckFile pck = new PckFile(1, 3, 3, 3); // TODO: automate or require as an argument
-            BytecodeProvider provider = BytecodeProvider.GetByCommitHash(options.BytecodeVersion);
+            BytecodeProvider provider = null;
+            if (options.BytecodeVersion != null) {
+                provider = BytecodeProvider.GetByCommitHash(options.BytecodeVersion);
+            }
             string[] files = Directory.GetFiles(options.InputPath, "*", SearchOption.AllDirectories);
             pck.Entries.Capacity = files.Length;
             for (int i = 0; i < files.Length; i++) {
@@ -137,6 +147,10 @@ namespace GdTool {
                     string withPrefix = "res://" + relative.Replace('\\', '/');
                     byte[] contents = File.ReadAllBytes(file);
                     if (relative.EndsWith(".gd")) {
+                        if (provider == null) {
+                            Console.WriteLine("Bytecode version must be supplied to compile GdScript file: " + relative);
+                            return;
+                        }
                         contents = GdScriptCompiler.Compile(Encoding.UTF8.GetString(contents), provider);
                         withPrefix += "c"; // convert ".gd" to ".gdc"
                     }
