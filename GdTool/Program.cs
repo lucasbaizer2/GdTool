@@ -2,6 +2,7 @@
 using System;
 using System.IO;
 using System.Text;
+using Newtonsoft.Json;
 
 namespace GdTool {
     public class Program {
@@ -85,6 +86,15 @@ namespace GdTool {
 
             Console.WriteLine("success.");
 
+            GdToolProject project = new GdToolProject {
+                PackFormatVersion = pck.PackFormatVersion,
+                VersionMajor = pck.VersionMajor,
+                VersionMinor = pck.VersionMinor,
+                VersionPatch = pck.VersionPatch
+            };
+            byte[] serializedProject = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(project));
+            File.WriteAllBytes(Path.Combine(outputDirectory, "gdtool-project.json"), serializedProject);
+
             BytecodeProvider provider = null;
             if (options.Decompile) {
                 if (options.BytecodeVersion == null) {
@@ -133,7 +143,15 @@ namespace GdTool {
                 return;
             }
 
-            PckFile pck = new PckFile(1, 3, 3, 3); // TODO: automate or require as an argument
+            if (!File.Exists(Path.Combine(options.InputPath, "gdtool-project.json"))) {
+                Console.WriteLine("Invalid project (gdtool-project.json file not present in directory): " + options.InputPath);
+                return;
+            }
+
+            string serializedProject = Encoding.UTF8.GetString(File.ReadAllBytes(Path.Combine(options.InputPath, "gdtool-project.json")));
+            GdToolProject project = JsonConvert.DeserializeObject<GdToolProject>(serializedProject);
+
+            PckFile pck = new PckFile(project.PackFormatVersion, project.VersionMajor, project.VersionMinor, project.VersionPatch);
             BytecodeProvider provider = null;
             if (options.BytecodeVersion != null) {
                 provider = BytecodeProvider.GetByCommitHash(options.BytecodeVersion);
@@ -143,6 +161,9 @@ namespace GdTool {
             for (int i = 0; i < files.Length; i++) {
                 string file = files[i];
                 string relative = Path.GetRelativePath(options.InputPath, file);
+                if (relative.Equals("gdtool-project.json")) { // don't pack the project fuke
+                    continue;
+                }
                 try {
                     string withPrefix = "res://" + relative.Replace('\\', '/');
                     byte[] contents = File.ReadAllBytes(file);
